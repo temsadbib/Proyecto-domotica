@@ -458,12 +458,12 @@ proyecto_domotica_3/
 | **Correlación sensores** | Alta redundancia entre los 4 sensores (> 0.95). Se puede reducir a 1 sensor. |
 | **Modelo ML lineal** | R² = 0.56 (test) para inferir temperatura de calefacción. |
 | **Red neuronal** | F1 = 0.84, ROC-AUC = 0.97 en test. Recall derroche = 0.90. |
-| **App de predicción** | Funcional con Streamlit, acepta datos manuales y de horas previas. |
+| **App de predicción** | Acepta datos manuales y de horas previas. |
 | **Dashboard Grafana** | Tiempo real con gauges y series temporales de los sensores. |
 
 ### 10.2 Conclusiones
 
-Los cuatro sensores del aula resultaron redundantes, por lo que nos quedamos con el sensor 2 por tener la mayor coantidad de datos. El estado de la calefacción se infirió mediante un modelo lineal a partir de los datos del aula. El derroche se define como calefacción encendida cuando puertas y ventanas están abiertas más de un umbral de X minutos ponderados. El target del clasificador lo hemos construido desplazando esa señal una hora hacia adelante. Hemos construido una red neuronal capaz de predecir si va a haber derroche en la siguiente hora si la calefacción está encendida. Y finalmentente hemos creado una aplicación que permite introducir las lecturas actuales y, opcionalmente, las de las tres horas previas, mostrando la probabilidad de derroche.
+Los cuatro sensores del aula resultaron redundantes, por lo que nos quedamos con el sensor 2 por tener la mayor cantidad de datos. El estado de la calefacción se infirió mediante un modelo lineal a partir de los datos del aula. El derroche se define como calefacción encendida cuando puertas y ventanas están abiertas más de un umbral de X minutos ponderados. El target del clasificador lo hemos construido desplazando esa señal una hora hacia adelante. Hemos construido una red neuronal capaz de predecir si va a haber derroche en la siguiente hora si la calefacción está encendida. Y finalmentente hemos creado una aplicación que permite introducir las lecturas actuales y, opcionalmente, las de las tres horas previas, mostrando la probabilidad de derroche.
 
 ### 10.3 Propuestas de mejora
 
