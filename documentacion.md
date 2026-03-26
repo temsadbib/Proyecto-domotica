@@ -1,0 +1,519 @@
+# Informe Técnico: Proyecto de Eficiencia Energética del Aula
+
+---
+
+## 1. Introducción y contexto
+
+El presente proyecto tiene como objetivo diseñar y construir una solución basada en datos para la **detección y predicción de derroche energético** en un aula del centro educativo. Se define *derroche* como la situación en la que la calefacción está encendida mientras las puertas o ventanas permanecen abiertas durante un tiempo significativo, provocando un consumo energético innecesario.
+
+El aula está equipada con una infraestructura IoT compuesta por sensores Zigbee y un sistema domótico basado en **Home Assistant**, que recoge datos históricos de forma continua. El proyecto se desarrolla durante 4 semanas hábiles (13 horas/semana), desde el 1 de marzo al 2 de abril.
+
+### 1.1 Objetivo principal
+
+Construir un modelo de inteligencia artificial capaz de **predecir si habrá derroche energético en la hora siguiente**, dados los valores actuales de los sensores del aula. Se trata de un problema de **clasificación binaria** donde:
+
+| Clase | Significado |
+|-------|-------------|
+| **0** | No habrá derroche en la siguiente hora |
+| **1** | Habrá derroche en la siguiente hora |
+
+### 1.2 Definición de derroche
+
+Se considera derroche cuando, en una hora determinada, la calefacción está encendida y las puertas o ventanas han permanecido abiertas más de un umbral de minutos. Se aplica una ponderación: la puerta cuenta el doble que una ventana inferior, de acuerdo con las indicaciones del proyecto.
+
+---
+
+## 2. Infraestructura disponible
+
+### 2.1 Stack tecnológico
+
+| Componente | Tecnología | Función |
+|---|---|---|
+| Servidor domótico | Home Assistant | Integración de sensores y fuentes externas |
+| Broker MQTT | Mosquitto | Mensajería entre dispositivos |
+| Pasarela Zigbee | Zigbee2MQTT + SLZB-06 | Comunicación con sensores Zigbee |
+| Base de datos | TimescaleDB (PostgreSQL 15) | Almacenamiento de series temporales |
+| Dashboard | Grafana | Visualización en tiempo real |
+| Lenguaje | Python 3 | Análisis, modelado e interfaz |
+| ML/IA | PyTorch, scikit-learn | Modelos de machine learning y redes neuronales |
+| App de predicción | Streamlit + Plotly | Interfaz de usuario para predicciones |
+| Contenedores | Docker Compose | Orquestación de servicios |
+
+### 2.2 Sensores del aula
+
+| Sensor | Modelo | Magnitudes |
+|---|---|---|
+| Temperatura/Humedad/Presión (×4) | Aqara WSDCGQ11LM | Temperatura (°C), humedad (%), presión (hPa) |
+| Puerta (×1) | Aqara MCCGQ11LM | Estado abierto/cerrado |
+| Ventanas (×12) | Aqara MCCGQ11LM | Estado abierto/cerrado |
+| Consumo eléctrico | Shelly Pro EM-50 | Consumo (W) |
+
+### 2.3 Integraciones externas en Home Assistant
+
+| Integración | Datos |
+|---|---|
+| Met.no (Mislata) | Temperatura exterior, nubosidad, humedad, viento |
+| Sun | Elevación solar, acimut solar |
+
+### 2.4 Base de datos
+
+La tabla principal es `public.ltss`, que almacena el histórico de Home Assistant:
+
+```sql
+CREATE TABLE public.ltss (
+  "time"      timestamptz NOT NULL,
+  entity_id   varchar     NOT NULL,
+  state       varchar     NULL,
+  attributes  jsonb       NULL
+);
+```
+
+---
+
+## 3. Arquitectura de datos: Medallion (Bronze → Silver → Gold)
+
+Se ha implementado una arquitectura de datos por capas (medallion), materializada como vistas SQL en TimescaleDB y complementada con notebooks de Python.
+
+### 3.1 Capa Bronze — Datos crudos filtrados
+
+**Vista:** `bronze_sensores` (`sql/01_bronze_extract.sql`)
+
+**Decisión:** Filtrar de la tabla `ltss` únicamente las entidades relevantes para el proyecto: los 4 sensores de temperatura/humedad/presión, la puerta, las 12 ventanas y los sensores externos (meteorología y sol).
+
+**Justificación:** Reduce el volumen de datos a procesar y elimina entidades no relacionadas con el análisis de eficiencia energética.
+
+```sql
+CREATE OR REPLACE VIEW bronze_sensores AS
+SELECT "time", entity_id, state, attributes
+FROM ltss
+WHERE entity_id IN (
+    'sensor.sensor_temperatura_1_temperature',
+    'sensor.sensor_temperatura_2_temperature',
+    -- ... (4 sensores × 3 magnitudes + 1 puerta + 12 ventanas + 6 ext.)
+);
+```
+
+### 3.2 Capa Silver — Limpieza y normalización
+
+**Vista:** `silver_sensores` (`sql/02_silver_clean.sql`)
+
+**Decisión:** Convertir los valores `state` (texto) a numéricos y unificar formatos:
+- Sensores binarios (puertas/ventanas): `on → 1.0`, `off → 0.0`
+- Sensor de presión 1: conversión de inHg a hPa (× 33.8639)
+- Se descartan valores `unavailable`, `unknown` y vacíos
+
+**Justificación:** Los datos originales de Home Assistant almacenan los valores como texto. Es imprescindible convertirlos a formato numérico para cualquier análisis estadístico o modelado.
+
+### 3.3 Capa Gold — Agregación por horas y features
+
+**Vista:** `gold_features_horaria` (`sql/03_gold_features_hourly.sql` y `bd/init-scripts/03_vistas.sql`)
+
+**Decisión:** Agregar los datos por hora con `date_trunc('hour', ...)` y calcular:
+- Media horaria de temperatura, humedad y presión del aula
+- Minutos con puerta/ventanas abiertas por hora (`AVG(state_numeric) × 60`)
+- Media horaria de temperatura exterior, nubosidad, humedad exterior, velocidad del viento
+- Media horaria de elevación y acimut solar
+
+**Justificación:** La granularidad horaria es la exigida por el proyecto y resulta adecuada para capturar patrones de uso del aula (horas de clase, recreos, etc.).
+
+Se dispone de dos variantes:
+- `sql/03_gold_features_hourly.sql`: usa solo el **sensor 2** para temperatura/humedad/presión del aula (basado en el análisis de correlación que determina que los sensores son redundantes).
+- `bd/init-scripts/03_vistas.sql`: promedia los **4 sensores** del aula, con manejo de nulos.
+
+### 3.4 Vista de correlaciones
+
+**Vista:** `gold_correlaciones` (`sql/05_gold_correlaciones.sql`)
+
+**Decisión:** Crear una vista pivotada con las medias horarias de los 4 sensores de temperatura, 4 de humedad, 4 de presión y la temperatura exterior.
+
+**Justificación:** Permite calcular matrices de correlación directamente en los notebooks para determinar redundancia entre sensores.
+
+---
+
+## 4. Análisis exploratorio y correlaciones (Fase B, Tareas 1-2)
+
+El notebook `01_eda.ipynb` realiza el análisis exploratorio de datos, incluyendo:
+
+### 4.1 Correlaciones entre sensores de temperatura
+
+**Evidencia:** Se calculó la matriz de correlación de Pearson entre los 4 sensores de temperatura del aula.
+
+**Conclusión:** Los sensores de temperatura presentan correlaciones muy altas entre sí (> 0.95), lo que indica alta **redundancia**. Es viable reducir a un único sensor representativo (se seleccionó el **sensor 2** por tener mejor cobertura temporal).
+
+### 4.2 Correlaciones entre sensores de humedad
+
+**Evidencia:** Se calculó igualmente la matriz de correlación para los 4 sensores de humedad.
+
+**Conclusión:** Patrón similar al de temperatura — alta correlación entre sensores, lo que confirma la redundancia. Se puede prescindir de 3 de los 4 sensores sin pérdida significativa de información.
+
+---
+
+## 5. Construcción del dataset Gold (Fase B, Tareas 3-9)
+
+El notebook `02_build_gold.ipynb` implementa todo el pipeline de construcción de datos:
+
+### 5.1 Tarea 3: Recopilación y agregación horaria
+
+**Decisión:** Leer la vista `gold_features_horaria` desde PostgreSQL y enriquecer con:
+- Variables de calendario: `hora_del_dia`, `dia_de_la_semana`, `mes_del_ano`
+- Datos de calefacción: join con `data/bronze/historico_calefaccion.csv`
+- Imputación de nulos: forward-fill + backward-fill
+
+**Resultado:** `data/silver/dataset_tarea3_limpio.csv` — 3.925 registros horarios.
+
+### 5.2 Tareas 4-5: Modelo ML lineal para temperatura de calefacción
+
+**Decisión:** Entrenar un `LinearRegression` de scikit-learn para **inferir la temperatura del sensor de calefacción** a partir de las condiciones ambientales del aula.
+
+**Features de entrada:** `temp_aula`, `hum_aula`, `pres_aula`, `temp_exterior`, `nubosidad`, `elevacion_sol`, `acimut_sol`
+
+**Métricas obtenidas:**
+
+| Métrica | Train | Test |
+|---------|-------|------|
+| R² | 0.9334 | 0.5623 |
+| MAE | 0.6789 | 0.7160 |
+| RMSE | 0.9091 | 0.8997 |
+
+**Coeficientes del modelo:**
+
+| Feature | Coeficiente |
+|---------|-------------|
+| temp_aula | 0.7884 |
+| hum_aula | -0.0492 |
+| pres_aula | 0.0148 |
+| temp_exterior | 0.0883 |
+| nubosidad | 0.0014 |
+| elevacion_sol | -0.0119 |
+| acimut_sol | -0.0013 |
+| intercept | -7.6510 |
+
+**Justificación:** El coeficiente más alto corresponde a `temp_aula` (0.79), lo cual tiene sentido físico: la temperatura del sensor de calefacción está fuertemente correlacionada con la temperatura general del aula. El R² en test (0.56) indica un ajuste moderado, suficiente para la tarea de inferencia.
+
+### 5.3 Tarea 6: Calefacción encendida
+
+**Decisión:** Se añadió la columna `calefaccion_encendida` (0/1) basándose en la temperatura inferida por el modelo lineal y el algoritmo de encendido de la calefacción proporcionado.
+
+**Resultado:** `data/gold/dataset_tarea6.csv`
+
+### 5.4 Tarea 7: Cálculo de derroche actual
+
+**Decisión:** Se calcularon los **minutos ponderados** que la puerta y ventanas estuvieron abiertas (la puerta cuenta como 2 ventanas inferiores). Se define `derroche_actual = 1` si la calefacción está encendida Y los minutos de apertura ponderados superan un umbral.
+
+**Resultado:** `data/gold/dataset_tarea7.csv`
+
+### 5.5 Tarea 8: Derroche en la hora siguiente
+
+**Decisión:** Se creó la columna `derroche_siguiente_hora` desplazando `derroche_actual` una hora hacia adelante (shift de -1 en pandas).
+
+**Justificación:** Este es el **target** del modelo de IA. Dado los datos de los sensores a una hora, se quiere predecir si habrá derroche en la hora siguiente.
+
+**Resultado:** `data/gold/dataset_tarea8.csv`
+
+### 5.6 Tarea 9: Dataset final para IA
+
+**Decisión:** Se eliminaron las columnas intermedias (estado de puertas/ventanas, minutos abiertos, temperatura inferida de calefacción) dejando solo las features relevantes para el modelo.
+
+**Justificación:** Las columnas eliminadas podrían generar ruido o sobreajuste, ya que su información ya está capturada por otras variables.
+
+**Columnas finales del dataset:**
+
+| Columna | Descripción |
+|---------|-------------|
+| `hora_del_dia` | Hora (0-23) |
+| `dia_de_la_semana` | Día (1-7) |
+| `mes_del_ano` | Mes (1-12) |
+| `temp_aula` | Temperatura media del aula (°C) |
+| `hum_aula` | Humedad media del aula (%) |
+| `pres_aula` | Presión media del aula (hPa) |
+| `temp_exterior` | Temperatura exterior (°C) |
+| `nubosidad` | Nubosidad (0-10) |
+| `hum_exterior` | Humedad exterior (%) |
+| `vel_viento` | Velocidad del viento (km/h) |
+| `elevacion_sol` | Elevación solar (°) |
+| `acimut_sol` | Acimut solar (°) |
+| `calefaccion_encendida` | Estado de la calefacción (0/1) |
+| `derroche_siguiente_hora` | **TARGET** — Derroche en la hora siguiente (0/1) |
+
+**Resultado:** `data/gold/dataset_tarea9_final.csv` — 3.924 muestras (1.058 derroche, 2.866 no derroche → 26.96% positivos).
+
+---
+
+## 6. Modelo de IA: Red Neuronal (Fase C, Tarea 10)
+
+Se han desarrollado dos versiones de la red neuronal, ambas en **PyTorch**.
+
+### 6.1 Versión 1: RedDerroche (`04_model_nn.ipynb`)
+
+**Arquitectura:**
+
+```
+Input (13 features)
+  → Linear(13, 64) → ReLU → BatchNorm(64) → Dropout(0.3)
+  → Linear(64, 32) → ReLU → BatchNorm(32) → Dropout(0.3)
+  → Linear(32, 1) → Sigmoid
+```
+
+**Configuración de entrenamiento:**
+- Función de pérdida: `BCEWithLogitsLoss` con `pos_weight` para compensar el desbalance de clases
+- Optimizador: Adam (lr=1e-3)
+- Scheduler: ReduceLROnPlateau
+- Épocas: 1.000
+- Batch size: 64
+- Partición temporal (sin shuffle): 70% train / 15% validación / 15% test
+
+**Métricas en validación:** Mejor Val F1 ≈ 0.89
+
+### 6.2 Versión 2: RedDerrocheV2 (`04b_model_nn_improved.ipynb`) — Modelo final
+
+**Mejoras respecto a V1:**
+
+| Aspecto | V1 | V2 |
+|---------|----|----|
+| Features | 13 originales | 31 (originales + lag + cíclicas + interacción) |
+| Codificación temporal | Directa | Cíclica (sin/cos para hora, día, mes) |
+| Lags | No | 3h (temp_aula, temp_exterior, calefacción) |
+| Deltas | No | Sí (variación 1h y 2h de temperatura) |
+| Interacciones | No | `calef × diff_temp`, `calef × viento` |
+| Activación | ReLU | GELU |
+| Conexión residual | No | Sí (skip connection) |
+| Función de pérdida | BCEWithLogitsLoss | Focal Loss (α=0.25, γ=2.0) |
+| Optimizador | Adam | AdamW (weight_decay=1e-4) |
+| Scheduler | ReduceLROnPlateau | CosineAnnealingWarmRestarts |
+| Early stopping | No | Sí (patience=40) |
+| Umbral | Fijo (0.5) | Optimizado por F1 en validación |
+| Gradient clipping | No | Sí (max_norm=1.0) |
+| Parámetros | ~3.500 | 46.081 |
+
+**Arquitectura V2:**
+
+```
+Input (31 features)
+  → Linear(31, 128) → BatchNorm(128) → GELU → Dropout(0.3)
+  → Linear(128, 128) → BatchNorm(128) → GELU → Dropout(0.3) + Skip(residual)
+  → Linear(128, 64) → BatchNorm(64) → GELU → Dropout(0.3)
+  → Linear(64, 1) → Sigmoid
+```
+
+**Features de la V2 (31 columnas):**
+
+Las 31 features se agrupan en:
+- **Temporales cíclicas** (6): hora_sin, hora_cos, dia_sin, dia_cos, mes_sin, mes_cos
+- **Ambiente interior** (3): temp_aula, hum_aula, pres_aula
+- **Ambiente exterior** (4): temp_exterior, nubosidad, hum_exterior, vel_viento
+- **Sol** (2): elevacion_sol, acimut_sol
+- **Calefacción** (1): calefaccion_encendida
+- **Lags 1-3h** (9): temp_aula_lag1/2/3, temp_exterior_lag1/2/3, calefaccion_lag1/2/3
+- **Deltas** (3): delta_temp_aula_1h, delta_temp_aula_2h, delta_temp_exterior_1h
+- **Interacciones** (3): diff_temp, calef_x_diff, calef_x_viento
+
+**Entrenamiento:**
+- Early stopping en época 67 (de 500 máximas)
+- Mejor Val F1: **0.9706**
+- Umbral óptimo: **0.50**
+
+### 6.3 Métricas finales en test (V2)
+
+| Métrica | Valor |
+|---------|-------|
+| **Accuracy** | 0.9083 |
+| **Precision** | 0.7889 |
+| **Recall** | 0.8987 |
+| **F1-Score** | 0.8402 |
+| **ROC-AUC** | 0.9660 |
+
+**Matriz de confusión (test):**
+
+|  | Predicho: No derroche | Predicho: Derroche |
+|---|---|---|
+| **Real: No derroche** | 393 | 38 |
+| **Real: Derroche** | 16 | 142 |
+
+**Informe de clasificación:**
+
+| Clase | Precision | Recall | F1-Score | Support |
+|---|---|---|---|---|
+| No derroche | 0.96 | 0.91 | 0.94 | 431 |
+| Derroche | 0.79 | 0.90 | 0.84 | 158 |
+| **Accuracy** | | | **0.91** | **589** |
+| **Macro avg** | 0.87 | 0.91 | 0.89 | 589 |
+| **Weighted avg** | 0.91 | 0.91 | 0.91 | 589 |
+
+**Justificación de métricas:**
+
+Se ha priorizado el **F1-Score** y el **Recall** de la clase *derroche* porque:
+- Es un problema con **clase minoritaria** (solo el 27% de las muestras son derroche)
+- Es preferible tener algún falso positivo (alertar sin derroche real) que falsos negativos (no detectar un derroche real)
+- El ROC-AUC de 0.9660 confirma que el modelo discrimina muy bien entre ambas clases
+
+### 6.4 Regla de negocio adicional
+
+Se implementó una regla determinista en el predictor: si `calefaccion_encendida == 0`, la predicción es automáticamente **no derroche** con probabilidad 0.0. Esto tiene sentido físico directo, ya que sin calefacción encendida no puede existir el derroche tal y como se ha definido.
+
+---
+
+## 7. Aplicación de predicción (Fase C, Tarea 11)
+
+### 7.1 Tecnología
+
+La aplicación se ha desarrollado con **Streamlit** y utiliza **Plotly** para la visualización del gauge de probabilidad.
+
+**Archivo principal:** `app_v2.py`
+**Módulo de inferencia:** `app/predictor.py`
+**Artefactos necesarios:** `models/model_derroche_v2.pt`, `models/scaler_derroche_v2.joblib`
+
+### 7.2 Interfaz
+
+La app presenta un formulario dividido en secciones:
+
+1. **Calendario y hora**: Hora del día, día de la semana, mes del año
+2. **Interior (aula)**: Temperatura, humedad y presión medias
+3. **Exterior y sol**: Temperatura exterior, nubosidad, humedad exterior, viento, elevación y acimut solar
+4. **Calefacción**: Estado encendida/apagada
+5. **Lecturas previas (opcional)**: Datos de las 3 horas anteriores para mejorar la predicción (si no se proporcionan, se usan los valores actuales como aproximación)
+
+### 7.3 Salida
+
+Al pulsar "Predecir derroche en la siguiente hora", la app muestra:
+- **Gauge de Plotly**: Indicador visual de probabilidad de derroche (0-100%), con colores verde/rojo
+- **Alerta o éxito**: Mensaje de alerta si se prevé derroche, mensaje de eficiencia si no
+- **Métricas**: P(Derroche) y P(Eficiente) como porcentajes
+- **Ventana objetivo**: Indica el rango horario de la predicción (ej: "12:00 → 13:00")
+
+### 7.4 Pipeline de inferencia
+
+```
+Entrada del usuario
+  → Construcción de 31 features (codificación cíclica, lags, deltas, interacciones)
+  → Escalado con StandardScaler (ajustado en entrenamiento)
+  → Forward pass por RedDerrocheV2
+  → Sigmoid → Probabilidad
+  → Comparación con umbral óptimo (0.50) → Predicción binaria
+```
+
+### 7.5 Diseño visual
+
+La app usa un tema personalizado con color primario `#4A4B8B` (morado), configurado en `.streamlit/config.toml` y estilos CSS personalizados.
+
+---
+
+## 8. Dashboard en Grafana (Fase D)
+
+### 8.1 Configuración
+
+El dashboard se despliega automáticamente vía Docker Compose junto con TimescaleDB. Grafana se configura con provisioning automático:
+- **Datasource:** TimescaleDB (PostgreSQL) en `bd/grafana/provisioning/datasources/timescaledb.yml`
+- **Dashboard:** JSON en `bd/grafana/dashboards/eficiencia_energetica.json`
+
+### 8.2 Dashboard: "Eficiencia Energética - Hoy en Directo"
+
+**Refresco:** Cada 5 segundos
+**Rango temporal:** Desde inicio del día hasta ahora
+
+**Paneles incluidos:**
+
+| Panel | Tipo | Descripción |
+|---|---|---|
+| T. Aula 1 | Gauge | Temperatura sensor 1 (última lectura) |
+| T. Aula 2 | Gauge | Temperatura sensor 2 (última lectura) |
+| T. Aula 3 | Gauge | Temperatura sensor 3 (última lectura) |
+| T. Aula 4 | Gauge | Temperatura sensor 4 (última lectura) |
+| Temperaturas del aula | Time Series | Evolución temporal de los 4 sensores de temperatura |
+| Humedades del aula | Time Series | Evolución temporal de los 4 sensores de humedad |
+
+**Umbrales de color en gauges:** Azul (< 18°C), Verde (18-24°C), Amarillo (24-28°C), Rojo (> 28°C)
+
+Las consultas se realizan contra la vista `silver_sensores`, que proporciona datos numéricos limpios.
+
+---
+
+## 9. Estructura del repositorio
+
+```
+proyecto_domotica_3/
+├── app_v2.py                         # App Streamlit de predicción
+├── requirements.txt                  # Dependencias Python
+├── app/
+│   └── predictor.py                  # Módulo de inferencia PyTorch
+├── .streamlit/
+│   └── config.toml                   # Tema de Streamlit
+├── models/                           # Artefactos del modelo (generados por notebooks)
+├── docs/
+│   ├── proyecto_guia.txt             # Guía del proyecto
+│   └── informe-tecnico.md            # Este documento
+├── data/
+│   ├── bronze/
+│   │   └── historico_calefaccion.csv  # Histórico de calefacción
+│   ├── silver/
+│   │   └── dataset_tarea3_limpio.csv  # Dataset limpio intermedio
+│   └── gold/
+│       ├── dataset_tarea6.csv         # Con calefacción encendida
+│       ├── dataset_tarea7.csv         # Con derroche actual
+│       ├── dataset_tarea8.csv         # Con derroche siguiente hora
+│       └── dataset_tarea9_final.csv   # Dataset final para IA
+├── sql/
+│   ├── 01_bronze_extract.sql          # Vista bronze
+│   ├── 02_silver_clean.sql            # Vista silver
+│   ├── 03_gold_features_hourly.sql    # Vista gold (sensor 2)
+│   ├── 04_grafana_live_silver.sql     # Vista para Grafana
+│   └── 05_gold_correlaciones.sql      # Vista para correlaciones
+├── notebooks_guia/
+│   ├── 01_eda.ipynb                   # Análisis exploratorio
+│   ├── 02_build_gold.ipynb            # Construcción dataset gold
+│   ├── 03_model_ml.ipynb              # Modelo ML lineal
+│   ├── 04_model_nn.ipynb              # Red neuronal V1
+│   ├── 04b_model_nn_improved.ipynb    # Red neuronal V2 (final)
+│   └── 05_evaluation.ipynb            # Evaluación y métricas
+└── bd/
+    ├── docker-compose.yml             # TimescaleDB + Grafana
+    ├── init-scripts/
+    │   ├── 01_creacion.sql            # Creación tabla ltss
+    │   ├── 02_datos.sql               # Volcado de datos
+    │   └── 03_vistas.sql              # Vistas SQL + tabla predicciones
+    └── grafana/
+        ├── dashboards/
+        │   └── eficiencia_energetica.json
+        └── provisioning/
+            ├── dashboards/provider.yml
+            └── datasources/timescaledb.yml
+```
+
+---
+
+## 10. Resultados y conclusiones
+
+### 10.1 Resumen de resultados
+
+| Componente | Resultado |
+|---|---|
+| **Correlación sensores** | Alta redundancia entre los 4 sensores (> 0.95). Se puede reducir a 1 sensor. |
+| **Modelo ML lineal** | R² = 0.56 (test) para inferir temperatura de calefacción. Aceptable para el propósito. |
+| **Red neuronal V2** | F1 = 0.84, ROC-AUC = 0.97 en test. Recall derroche = 0.90. |
+| **App de predicción** | Funcional con Streamlit, acepta datos manuales y opcionalmente lags. |
+| **Dashboard Grafana** | Tiempo real con gauges y series temporales de los sensores. |
+
+### 10.2 Conclusiones
+
+1. **El modelo V2 demuestra una capacidad predictiva sólida** con un ROC-AUC de 0.9660, indicando que discrimina eficazmente entre situaciones de derroche y eficiencia.
+
+2. **La ingeniería de features fue determinante**: pasar de 13 a 31 features (codificación cíclica, lags, deltas, interacciones) mejoró significativamente el rendimiento del modelo.
+
+3. **La Focal Loss y el AdamW** resultaron más efectivos que la BCEWithLogitsLoss y Adam estándar para manejar el desbalance de clases (27% positivos).
+
+4. **Los sensores de temperatura del aula son altamente redundantes**, lo que permite optimizar la infraestructura reduciendo el número de sensores sin pérdida significativa de información.
+
+5. **La regla de negocio** (si calefacción apagada → no derroche) es una incorporación inteligente que evita predicciones ilógicas y mejora la confianza en el sistema.
+
+### 10.3 Propuestas de mejora
+
+1. **Datos en tiempo real**: Conectar la app directamente con la base de datos TimescaleDB para alimentarse automáticamente de los datos actuales de los sensores, sin necesidad de introducirlos manualmente.
+
+2. **Alertas proactivas**: Implementar un sistema de alertas automáticas (email, notificación push) cuando el modelo prediga derroche.
+
+3. **Reentrenamiento periódico**: Actualizar el modelo con datos más recientes para mantener su precisión a lo largo del tiempo y adaptarse a cambios estacionales.
+
+4. **Más variables**: Incorporar datos de consumo eléctrico del Shelly Pro EM-50 como feature adicional o como métrica de validación del derroche.
+
+5. **Modelo de series temporales**: Explorar arquitecturas como LSTM o Transformer para capturar mejor las dependencias temporales a largo plazo.
+
+6. **Despliegue en producción**: Completar los scripts de simulación y predicción en tiempo real para Docker Compose (servicios `simulate-ltss` y `predict-derroche`).
