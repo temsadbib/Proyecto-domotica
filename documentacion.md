@@ -4,9 +4,9 @@
 
 ## 1. Introducción y contexto
 
-El presente proyecto tiene como objetivo diseñar y construir una solución basada en datos para la **detección y predicción de derroche energético** en un aula del centro educativo. Se define *derroche* como la situación en la que la calefacción está encendida mientras las puertas o ventanas permanecen abiertas durante un tiempo significativo, provocando un consumo energético innecesario.
+El proyecto tiene como objetivo diseñar y construir una solución basada en datos para la **detección y predicción de derroche energético** en un aula del centro educativo. Se define *derroche* como la situación en la que la calefacción está encendida mientras las puertas o ventanas permanecen abiertas durante un tiempo significativo, provocando un consumo energético innecesario.
 
-El aula está equipada con una infraestructura IoT compuesta por sensores Zigbee y un sistema domótico basado en **Home Assistant**, que recoge datos históricos de forma continua. El proyecto se desarrolla durante 4 semanas hábiles (13 horas/semana), desde el 1 de marzo al 2 de abril.
+El aula está equipada con una infraestructura IoT compuesta por sensores Zigbee y un sistema domótico basado en **Home Assistant**, que recoge datos históricos de forma continua.
 
 ### 1.1 Objetivo principal
 
