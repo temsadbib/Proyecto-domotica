@@ -355,15 +355,15 @@ Se implementó una regla determinista en el predictor: si `calefaccion_encendida
 
 ---
 
-## 7. Aplicación de predicción (Fase C, Tarea 11)
+## 7. Aplicación de predicción (Tarea 11)
 
 ### 7.1 Tecnología
 
 La aplicación se ha desarrollado con **Streamlit** y **Plotly**.
 
-**Archivo principal:** `app_v2.py`
+**Archivo principal:** `app.py`
 **Módulo de inferencia:** `app/predictor.py`
-**Artefactos necesarios:** `models/model_derroche_v2.pt`, `models/scaler_derroche_v2.joblib`
+**Artefactos necesarios:** `models/modelo_derroche.pt`, `models/scaler_derroche.joblib`
 
 ### 7.2 Interfaz
 
@@ -403,7 +403,7 @@ proyecto_domotica_3/
 ├── requirements.txt                  # Dependencias Python
 ├── app/
 │   ├── predictor.py                  # Módulo de inferencia PyTorch
-│   └── app_v2.py                     # App Streamlit de predicción
+│   └── app.py                     # App Streamlit de predicción
 ├── .streamlit/
 │   └── config.toml                   # Tema de Streamlit
 ├── models/                           # Artefactos del modelo
@@ -456,33 +456,22 @@ proyecto_domotica_3/
 | Componente | Resultado |
 |---|---|
 | **Correlación sensores** | Alta redundancia entre los 4 sensores (> 0.95). Se puede reducir a 1 sensor. |
-| **Modelo ML lineal** | R² = 0.56 (test) para inferir temperatura de calefacción. Aceptable para el propósito. |
-| **Red neuronal V2** | F1 = 0.84, ROC-AUC = 0.97 en test. Recall derroche = 0.90. |
-| **App de predicción** | Funcional con Streamlit, acepta datos manuales y opcionalmente lags. |
+| **Modelo ML lineal** | R² = 0.56 (test) para inferir temperatura de calefacción. |
+| **Red neuronal** | F1 = 0.84, ROC-AUC = 0.97 en test. Recall derroche = 0.90. |
+| **App de predicción** | Funcional con Streamlit, acepta datos manuales y de horas previas. |
 | **Dashboard Grafana** | Tiempo real con gauges y series temporales de los sensores. |
 
 ### 10.2 Conclusiones
 
-1. **El modelo V2 demuestra una capacidad predictiva sólida** con un ROC-AUC de 0.9660, indicando que discrimina eficazmente entre situaciones de derroche y eficiencia.
-
-2. **La ingeniería de features fue determinante**: pasar de 13 a 31 features (codificación cíclica, lags, deltas, interacciones) mejoró significativamente el rendimiento del modelo.
-
-3. **La Focal Loss y el AdamW** resultaron más efectivos que la BCEWithLogitsLoss y Adam estándar para manejar el desbalance de clases (27% positivos).
-
-4. **Los sensores de temperatura del aula son altamente redundantes**, lo que permite optimizar la infraestructura reduciendo el número de sensores sin pérdida significativa de información.
-
-5. **La regla de negocio** (si calefacción apagada → no derroche) es una incorporación inteligente que evita predicciones ilógicas y mejora la confianza en el sistema.
+Los cuatro sensores del aula resultaron redundantes, por lo que nos quedamos con el sensor 2 por tener la mayor coantidad de datos. El estado de la calefacción se infirió mediante un modelo lineal a partir de los datos del aula. El derroche se define como calefacción encendida cuando puertas y ventanas están abiertas más de un umbral de X minutos ponderados. El target del clasificador lo hemos construido desplazando esa señal una hora hacia adelante. Hemos construido una red neuronal capaz de predecir si va a haber derroche en la siguiente hora si la calefacción está encendida. Y finalmentente hemos creado una aplicación que permite introducir las lecturas actuales y, opcionalmente, las de las tres horas previas, mostrando la probabilidad de derroche.
 
 ### 10.3 Propuestas de mejora
 
-1. **Datos en tiempo real**: Conectar la app directamente con la base de datos TimescaleDB para alimentarse automáticamente de los datos actuales de los sensores, sin necesidad de introducirlos manualmente.
+1. **Alertas**: Implementar un sistema de alertas automáticas (email, notificación push) cuando el modelo prediga derroche.
 
-2. **Alertas proactivas**: Implementar un sistema de alertas automáticas (email, notificación push) cuando el modelo prediga derroche.
+2. **Reentrenamiento**: Actualizar el modelo con datos más recientes para mantener su precisión a lo largo del tiempo y adaptarse a cambios estacionales.
 
-3. **Reentrenamiento periódico**: Actualizar el modelo con datos más recientes para mantener su precisión a lo largo del tiempo y adaptarse a cambios estacionales.
+3. **Más variables**: Incorporar datos de consumo eléctrico.
 
-4. **Más variables**: Incorporar datos de consumo eléctrico del Shelly Pro EM-50 como feature adicional o como métrica de validación del derroche.
+4. **Modelo de series temporales**: Explorar arquitecturas como LSTM o Transformer para capturar mejor las dependencias temporales a largo plazo.
 
-5. **Modelo de series temporales**: Explorar arquitecturas como LSTM o Transformer para capturar mejor las dependencias temporales a largo plazo.
-
-6. **Despliegue en producción**: Completar los scripts de simulación y predicción en tiempo real para Docker Compose (servicios `simulate-ltss` y `predict-derroche`).
