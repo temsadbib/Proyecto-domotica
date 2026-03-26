@@ -21,6 +21,10 @@ Construir un modelo de inteligencia artificial capaz de **predecir si habrá der
 
 Se considera derroche cuando, en una hora determinada, la calefacción está encendida y las puertas o ventanas han permanecido abiertas más de un umbral de minutos. Se aplica una ponderación: la puerta cuenta el doble que una ventana inferior, de acuerdo con las indicaciones del proyecto.
 
+### 1.3 Target del modelo
+
+Se considera derroche cuando, en una hora determinada, la calefacción está encendida y las puertas o ventanas han permanecido abiertas más de un umbral de minutos. Se aplica una ponderación: la puerta cuenta el doble que una ventana inferior, de acuerdo con las indicaciones del proyecto.
+
 ---
 
 ## 2. Infraestructura disponible
@@ -80,7 +84,7 @@ Se ha implementado una arquitectura de datos por capas (medallion), materializad
 
 **Decisión:** Filtrar de la tabla `ltss` únicamente las entidades relevantes para el proyecto: los 4 sensores de temperatura/humedad/presión, la puerta, las 12 ventanas y los sensores externos (meteorología y sol).
 
-**Justificación:** Reduce el volumen de datos a procesar y elimina entidades no relacionadas con el análisis de eficiencia energética.
+**Justificación:** Reduce el volumen de datos a procesar y eliminar las entidades que no esten relacionadas.
 
 ```sql
 CREATE OR REPLACE VIEW bronze_sensores AS
@@ -102,68 +106,67 @@ WHERE entity_id IN (
 - Sensor de presión 1: conversión de inHg a hPa (× 33.8639)
 - Se descartan valores `unavailable`, `unknown` y vacíos
 
-**Justificación:** Los datos originales de Home Assistant almacenan los valores como texto. Es imprescindible convertirlos a formato numérico para cualquier análisis estadístico o modelado.
+**Justificación:** Los datos originales de Home Assistant almacenan los valores como texto.Por lo que es imprescindible convertirlos a formato numérico para el análisis estadístico.
 
 ### 3.3 Capa Gold — Agregación por horas y features
 
 **Vista:** `gold_features_horaria` (`sql/03_gold_features_hourly.sql` y `bd/init-scripts/03_vistas.sql`)
 
-**Decisión:** Agregar los datos por hora con `date_trunc('hour', ...)` y calcular:
-- Media horaria de temperatura, humedad y presión del aula
-- Minutos con puerta/ventanas abiertas por hora (`AVG(state_numeric) × 60`)
-- Media horaria de temperatura exterior, nubosidad, humedad exterior, velocidad del viento
-- Media horaria de elevación y acimut solar
+**Decisión:** Agregar los datos por hora y calcular:
+- Media de temperatura, humedad y presión del aula
+- Minutos con puerta/ventanas abiertas por hora
+- Media de temperatura exterior, nubosidad, humedad exterior, velocidad del viento
+- Media de elevación y acimut solar
 
-**Justificación:** La granularidad horaria es la exigida por el proyecto y resulta adecuada para capturar patrones de uso del aula (horas de clase, recreos, etc.).
+**Justificación:** Trabajar a nivel horario reduce el ruido sin perder variacion relevantes en los datos.
 
 Se dispone de dos variantes:
-- `sql/03_gold_features_hourly.sql`: usa solo el **sensor 2** para temperatura/humedad/presión del aula (basado en el análisis de correlación que determina que los sensores son redundantes).
-- `bd/init-scripts/03_vistas.sql`: promedia los **4 sensores** del aula, con manejo de nulos.
+- `sql/03_gold_features_hourly.sql`: usa solo el **sensor 2** para temperatura/humedad/presión del aula (basado en el análisis de correlación que determina que los sensores son redundantes) ya que es el sensor con mayor cantidad datos.
 
 ### 3.4 Vista de correlaciones
 
 **Vista:** `gold_correlaciones` (`sql/05_gold_correlaciones.sql`)
 
-**Decisión:** Crear una vista pivotada con las medias horarias de los 4 sensores de temperatura, 4 de humedad, 4 de presión y la temperatura exterior.
+**Decisión:** Crear una vista para visualizar las correlaciones entres los diferentes sensores.
 
-**Justificación:** Permite calcular matrices de correlación directamente en los notebooks para determinar redundancia entre sensores.
+**Justificación:** Permite calcular correlación para determinar redundancia entre sensores.
 
 ---
 
-## 4. Análisis exploratorio y correlaciones (Fase B, Tareas 1-2)
+## 4. Análisis exploratorio y correlaciones (Tareas 1-2)
 
 El notebook `01_eda.ipynb` realiza el análisis exploratorio de datos, incluyendo:
 
 ### 4.1 Correlaciones entre sensores de temperatura
 
-**Evidencia:** Se calculó la matriz de correlación de Pearson entre los 4 sensores de temperatura del aula.
+**Decisión:** Calculamos la correlación entre los 4 sensores de temperatura del aula.
 
-**Conclusión:** Los sensores de temperatura presentan correlaciones muy altas entre sí (> 0.95), lo que indica alta **redundancia**. Es viable reducir a un único sensor representativo (se seleccionó el **sensor 2** por tener mejor cobertura temporal).
+**Conclusión:** Los sensores de temperatura presentan correlaciones muy altas entre sí (> 0.95), lo que indica alta **redundancia**. Es viable reducir a un único sensor representativo (Seleccionamos el **sensor 2** por tener la mayor cantidad de datos).
 
 ### 4.2 Correlaciones entre sensores de humedad
 
-**Evidencia:** Se calculó igualmente la matriz de correlación para los 4 sensores de humedad.
+**Decisión:** Calculamos la correlación para los 4 sensores de humedad.
 
-**Conclusión:** Patrón similar al de temperatura — alta correlación entre sensores, lo que confirma la redundancia. Se puede prescindir de 3 de los 4 sensores sin pérdida significativa de información.
+**Conclusión:** Patrón similar al de temperatura: alta correlación entre sensores, lo que confirma la redundancia. Se puede prescindir de 3 de los 4 sensores sin pérdida significativa de información.
 
 ---
 
-## 5. Construcción del dataset Gold (Fase B, Tareas 3-9)
+## 5. Construcción del dataset Gold (Tareas 3-9)
 
-El notebook `02_build_gold.ipynb` implementa todo el pipeline de construcción de datos:
+El notebook `02_build_gold.ipynb` implementa todo el pipeline del flujo de datos:
 
 ### 5.1 Tarea 3: Recopilación y agregación horaria
 
-**Decisión:** Leer la vista `gold_features_horaria` desde PostgreSQL y enriquecer con:
+**Decisión:** Leer la vista `gold_features_horaria` desde PostgreSQL y enriquecer:
 - Variables de calendario: `hora_del_dia`, `dia_de_la_semana`, `mes_del_ano`
 - Datos de calefacción: join con `data/bronze/historico_calefaccion.csv`
-- Imputación de nulos: forward-fill + backward-fill
+- Imputación de nulos
 
 **Resultado:** `data/silver/dataset_tarea3_limpio.csv` — 3.925 registros horarios.
 
 ### 5.2 Tareas 4-5: Modelo ML lineal para temperatura de calefacción
 
-**Decisión:** Entrenar un `LinearRegression` de scikit-learn para **inferir la temperatura del sensor de calefacción** a partir de las condiciones ambientales del aula.
+**Decisión:** Entrenar un `LinearRegression` para **inferir la temperatura del sensor de calefacción** a partir de las condiciones del aula.
 
 **Features de entrada:** `temp_aula`, `hum_aula`, `pres_aula`, `temp_exterior`, `nubosidad`, `elevacion_sol`, `acimut_sol`
 
@@ -188,25 +191,25 @@ El notebook `02_build_gold.ipynb` implementa todo el pipeline de construcción d
 | acimut_sol | -0.0013 |
 | intercept | -7.6510 |
 
-**Justificación:** El coeficiente más alto corresponde a `temp_aula` (0.79), lo cual tiene sentido físico: la temperatura del sensor de calefacción está fuertemente correlacionada con la temperatura general del aula. El R² en test (0.56) indica un ajuste moderado, suficiente para la tarea de inferencia.
+**Justificación:** El coeficiente más alto corresponde a `temp_aula` (0.79), lo cual tiene sentido: la temperatura del sensor de calefacción está fuertemente correlacionada con la temperatura general del aula. El R² en test (0.56) indica un ajuste moderado, suficiente para la inferencia.
 
 ### 5.3 Tarea 6: Calefacción encendida
 
-**Decisión:** Se añadió la columna `calefaccion_encendida` (0/1) basándose en la temperatura inferida por el modelo lineal y el algoritmo de encendido de la calefacción proporcionado.
+**Decisión:** Añadimos la columna `calefaccion_encendida` (0/1) basándose en la temperatura inferida por el modelo lineal y el algoritmo de encendido de la calefacción.
 
 **Resultado:** `data/gold/dataset_tarea6.csv`
 
 ### 5.4 Tarea 7: Cálculo de derroche actual
 
-**Decisión:** Se calcularon los **minutos ponderados** que la puerta y ventanas estuvieron abiertas (la puerta cuenta como 2 ventanas inferiores). Se define `derroche_actual = 1` si la calefacción está encendida Y los minutos de apertura ponderados superan un umbral.
+**Decisión:** Calculamos los **minutos ponderados** que la puerta y ventanas estuvieron abiertas (la puerta cuenta como 2 ventanas inferiores y estas como dos superiores). Se define `derroche_actual = 1` si la calefacción está encendida Y los minutos de apertura ponderados superan un umbral.
 
 **Resultado:** `data/gold/dataset_tarea7.csv`
 
 ### 5.5 Tarea 8: Derroche en la hora siguiente
 
-**Decisión:** Se creó la columna `derroche_siguiente_hora` desplazando `derroche_actual` una hora hacia adelante (shift de -1 en pandas).
+**Decisión:** Creamos la columna `derroche_siguiente_hora` desplazando `derroche_actual` una hora hacia adelante.
 
-**Justificación:** Este es el **target** del modelo de IA. Dado los datos de los sensores a una hora, se quiere predecir si habrá derroche en la hora siguiente.
+**Justificación:** Este es el **target** del modelo de IA. Dado los datos de los sensores a una hora, queremos predecir si habrá derroche en la hora siguiente.
 
 **Resultado:** `data/gold/dataset_tarea8.csv`
 
