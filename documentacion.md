@@ -409,7 +409,7 @@ proyecto_domotica_3/
 ├── models/                           # Artefactos del modelo
 │   ├── modelo_derroche.pt            # Modelo
 │   └── scaler_derroche.joblib        # Scaler
-├── doc<s/
+├── docs/
 │   └── informe-tecnico.md            # Informe técnico
 ├── data/
 │   ├── bronze/
@@ -441,7 +441,7 @@ proyecto_domotica_3/
 │       └── 02_datos.sql               # Volcado de datos
 └── grafana/
     ├── dashboards/
-    └── eficiencia_energetica.json  # Dashboard 
+    └── eficiencia_energetica.json     # Dashboard 
         └── provisioning/
             ├── dashboards/provider.yml
             └── datasources/timescaledb.yml
