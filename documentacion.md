@@ -463,7 +463,17 @@ proyecto_domotica_3/
 
 ### 10.2 Conclusiones
 
-Los cuatro sensores del aula resultaron redundantes, por lo que nos quedamos con el sensor 2 por tener la mayor cantidad de datos. El estado de la calefacción se infirió mediante un modelo lineal a partir de los datos del aula. El derroche se define como calefacción encendida cuando puertas y ventanas están abiertas más de un umbral de X minutos ponderados. El target del clasificador lo hemos construido desplazando esa señal una hora hacia adelante. Hemos construido una red neuronal capaz de predecir si va a haber derroche en la siguiente hora si la calefacción está encendida. Y finalmentente hemos creado una aplicación que permite introducir las lecturas actuales y, opcionalmente, las de las tres horas previas, mostrando la probabilidad de derroche.
+1. **Sensores**: Los cuatro sensores del aula resultaron redundantes, por lo que nos quedamos con el sensor 2 por tener la mayor cantidad de datos.
+
+2. **Calefacción**: El estado de la calefacción se infirió mediante un modelo lineal a partir de los datos del aula.
+
+3. **Derroche**: El derroche se define como calefacción encendida cuando puertas y ventanas están abiertas más de un umbral de X minutos ponderados.
+
+4. **Target**: El target del clasificador lo hemos construido desplazando esa señal una hora hacia adelante.
+
+5. **Red Neuronal**: Hemos construido una red neuronal capaz de predecir si va a haber derroche en la siguiente hora si la calefacción está encendida.
+
+6. **App**: Hemos creado una aplicación que permite introducir las lecturas actuales y, opcionalmente, las de las tres horas previas, mostrando la probabilidad de derroche.
 
 ### 10.3 Propuestas de mejora
 
