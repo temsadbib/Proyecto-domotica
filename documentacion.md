@@ -215,9 +215,9 @@ El notebook `02_build_gold.ipynb` implementa todo el pipeline del flujo de datos
 
 ### 5.6 Tarea 9: Dataset final para IA
 
-**Decisión:** Se eliminaron las columnas intermedias (estado de puertas/ventanas, minutos abiertos, temperatura inferida de calefacción) dejando solo las features relevantes para el modelo.
+**Decisión:** Eliminamos las columnas intermedias (estado de puertas/ventanas, minutos abiertos, temperatura inferida de calefacción) dejando solo las features relevantes para el modelo.
 
-**Justificación:** Las columnas eliminadas podrían generar ruido o sobreajuste, ya que su información ya está capturada por otras variables.
+**Justificación:** Las columnas eliminadas podrían generar ruido o sobreajuste.
 
 **Columnas finales del dataset:**
 
@@ -242,7 +242,7 @@ El notebook `02_build_gold.ipynb` implementa todo el pipeline del flujo de datos
 
 ---
 
-## 6. Modelo de IA: Red Neuronal (Fase C, Tarea 10)
+## 6. Modelo de IA: Red Neuronal (Tarea 10)
 
 Se han desarrollado dos versiones de la red neuronal, ambas en **PyTorch**.
 
@@ -359,7 +359,7 @@ Se implementó una regla determinista en el predictor: si `calefaccion_encendida
 
 ### 7.1 Tecnología
 
-La aplicación se ha desarrollado con **Streamlit** y utiliza **Plotly** para la visualización del gauge de probabilidad.
+La aplicación se ha desarrollado con **Streamlit** y **Plotly**.
 
 **Archivo principal:** `app_v2.py`
 **Módulo de inferencia:** `app/predictor.py`
@@ -378,56 +378,22 @@ La app presenta un formulario dividido en secciones:
 ### 7.3 Salida
 
 Al pulsar "Predecir derroche en la siguiente hora", la app muestra:
-- **Gauge de Plotly**: Indicador visual de probabilidad de derroche (0-100%), con colores verde/rojo
-- **Alerta o éxito**: Mensaje de alerta si se prevé derroche, mensaje de eficiencia si no
+- **Gauge**: Indicador de probabilidad de derroche (0-100%), con colores verde/rojo
+- **Alerta o éxito**: Mensaje de alerta si se prevé derroche
 - **Métricas**: P(Derroche) y P(Eficiente) como porcentajes
 - **Ventana objetivo**: Indica el rango horario de la predicción (ej: "12:00 → 13:00")
 
-### 7.4 Pipeline de inferencia
-
-```
-Entrada del usuario
-  → Construcción de 31 features (codificación cíclica, lags, deltas, interacciones)
-  → Escalado con StandardScaler (ajustado en entrenamiento)
-  → Forward pass por RedDerrocheV2
-  → Sigmoid → Probabilidad
-  → Comparación con umbral óptimo (0.50) → Predicción binaria
-```
-
-### 7.5 Diseño visual
-
-La app usa un tema personalizado con color primario `#4A4B8B` (morado), configurado en `.streamlit/config.toml` y estilos CSS personalizados.
-
 ---
 
-## 8. Dashboard en Grafana (Fase D)
+## 8. Dashboard en Grafana
 
 ### 8.1 Configuración
 
-El dashboard se despliega automáticamente vía Docker Compose junto con TimescaleDB. Grafana se configura con provisioning automático:
+El dashboard se despliega automáticamente con Docker:
 - **Datasource:** TimescaleDB (PostgreSQL) en `bd/grafana/provisioning/datasources/timescaledb.yml`
 - **Dashboard:** JSON en `bd/grafana/dashboards/eficiencia_energetica.json`
 
-### 8.2 Dashboard: "Eficiencia Energética - Hoy en Directo"
-
-**Refresco:** Cada 5 segundos
-**Rango temporal:** Desde inicio del día hasta ahora
-
-**Paneles incluidos:**
-
-| Panel | Tipo | Descripción |
-|---|---|---|
-| T. Aula 1 | Gauge | Temperatura sensor 1 (última lectura) |
-| T. Aula 2 | Gauge | Temperatura sensor 2 (última lectura) |
-| T. Aula 3 | Gauge | Temperatura sensor 3 (última lectura) |
-| T. Aula 4 | Gauge | Temperatura sensor 4 (última lectura) |
-| Temperaturas del aula | Time Series | Evolución temporal de los 4 sensores de temperatura |
-| Humedades del aula | Time Series | Evolución temporal de los 4 sensores de humedad |
-
-**Umbrales de color en gauges:** Azul (< 18°C), Verde (18-24°C), Amarillo (24-28°C), Rojo (> 28°C)
-
-Las consultas se realizan contra la vista `silver_sensores`, que proporciona datos numéricos limpios.
-
+### 8.2 Dashboard:
 ---
 
 ## 9. Estructura del repositorio
