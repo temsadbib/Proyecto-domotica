@@ -400,18 +400,20 @@ El dashboard se despliega automáticamente con Docker:
 
 ```
 proyecto_domotica_3/
-├── app_v2.py                         # App Streamlit de predicción
 ├── requirements.txt                  # Dependencias Python
 ├── app/
-│   └── predictor.py                  # Módulo de inferencia PyTorch
+│   ├── predictor.py                  # Módulo de inferencia PyTorch
+│   └── app_v2.py                     # App Streamlit de predicción
 ├── .streamlit/
 │   └── config.toml                   # Tema de Streamlit
-├── models/                           # Artefactos del modelo (generados por notebooks)
-├── docs/
-│   ├── proyecto_guia.txt             # Guía del proyecto
-│   └── informe-tecnico.md            # Este documento
+├── models/                           # Artefactos del modelo
+│   ├── modelo_derroche.pt            # Modelo
+│   └── scaler_derroche.joblib        # Scaler
+├── doc<s/
+│   └── informe-tecnico.md            # Informe técnico
 ├── data/
 │   ├── bronze/
+│   │   ├── dataset_sucio.csv          # Dataset con datos crudos
 │   │   └── historico_calefaccion.csv  # Histórico de calefacción
 │   ├── silver/
 │   │   └── dataset_tarea3_limpio.csv  # Dataset limpio intermedio
@@ -424,24 +426,22 @@ proyecto_domotica_3/
 │   ├── 01_bronze_extract.sql          # Vista bronze
 │   ├── 02_silver_clean.sql            # Vista silver
 │   ├── 03_gold_features_hourly.sql    # Vista gold (sensor 2)
-│   ├── 04_grafana_live_silver.sql     # Vista para Grafana
+│   ├── 04_grafana_live_silver.sql     # Vista para Grafana en tiempo real
 │   └── 05_gold_correlaciones.sql      # Vista para correlaciones
-├── notebooks_guia/
+├── notebooks/
 │   ├── 01_eda.ipynb                   # Análisis exploratorio
 │   ├── 02_build_gold.ipynb            # Construcción dataset gold
 │   ├── 03_model_ml.ipynb              # Modelo ML lineal
-│   ├── 04_model_nn.ipynb              # Red neuronal V1
-│   ├── 04b_model_nn_improved.ipynb    # Red neuronal V2 (final)
+│   ├── 04_model_nn.ipynb              # Red neuronal
 │   └── 05_evaluation.ipynb            # Evaluación y métricas
-└── bd/
-    ├── docker-compose.yml             # TimescaleDB + Grafana
-    ├── init-scripts/
-    │   ├── 01_creacion.sql            # Creación tabla ltss
-    │   ├── 02_datos.sql               # Volcado de datos
-    │   └── 03_vistas.sql              # Vistas SQL + tabla predicciones
-    └── grafana/
-        ├── dashboards/
-        │   └── eficiencia_energetica.json
+├── bd/
+│   ├── docker-compose.yml             # TimescaleDB + Grafana
+│   └── init-scripts/
+│       ├── 01_creacion.sql            # Creación tabla ltss
+│       └── 02_datos.sql               # Volcado de datos
+└── grafana/
+    ├── dashboards/
+    └── eficiencia_energetica.json  # Dashboard 
         └── provisioning/
             ├── dashboards/provider.yml
             └── datasources/timescaledb.yml
