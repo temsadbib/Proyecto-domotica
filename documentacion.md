@@ -394,6 +394,30 @@ El dashboard se despliega automáticamente con Docker:
 - **Dashboard:** JSON en `bd/grafana/dashboards/eficiencia_energetica.json`
 
 ### 8.2 Dashboard:
+
+Los dashboards del proyecto son los siguientes:
+| Archivo | Uso |
+|---------|-----|
+| `dashboard/Proyecto domótica - tiempo real.json` | Dashboard **en directo**|
+| `dashboard/Proyecto domótica - estático.json` | Dashboard **histórico**|
+
+**Paneles del dashboard estático:**
+1. **Distribución del sensor**  
+   - Tres gauges (*min*, *media*, *max*) de temperatura para el sensor elegido.
+2. **Temperatura a lo largo del tiempo**  
+   - Serie temporal de la temperatura del sensor seleccionado.
+3. **Comparativa de todos los sensores**  
+   - Serie con los cuatro sensores interiores y el sensor exterior.
+4. **Humedad histórica**  
+   - Serie con la humedad de los sensores interiores y humedad exterior.
+5. **Meteorología histórica**  
+   - T. Exterior y Nubosidad: temperatura exterior y porcentaje de nubosidad. 
+   - Elevación solar y Viento: elevación solar y velocidad del viento.
+6. **Análisis de derroche histórico**  
+   - Derroche por hora del día y día de la semana: mapa de calor con el porcentaje de derroche.  
+   - Derroche mensual: barras con las horas de derroche por mes.  
+   - Minutos puertas y ventanas abiertas por mes: barras apiladas con la suma de minutos que han estado abiertas puertas y ventanas.
+
 ---
 
 ## 9. Estructura del repositorio
