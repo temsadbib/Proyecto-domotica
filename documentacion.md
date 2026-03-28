@@ -19,7 +19,7 @@ Construir un modelo de inteligencia artificial capaz de **predecir si habrá der
 
 ### 1.2 Definición de derroche
 
-Se considera derroche cuando, en una hora determinada, la calefacción está encendida y las puertas o ventanas han permanecido abiertas más de un umbral de minutos. Se aplica una ponderación: la puerta cuenta el doble que una ventana inferior, de acuerdo con las indicaciones del proyecto.
+Se considera derroche cuando, en una hora determinada, la calefacción está encendida y las puertas o ventanas han permanecido abiertas más de un umbral del 20 % de la hora, equivalente a 12 minutos ponderados. Se aplica una ponderación: la puerta cuenta el doble que una ventana inferior, y cada ventana inferior el doble que una superior.
 
 ### 1.3 Target del modelo
 
@@ -201,7 +201,7 @@ El notebook `02_build_gold.ipynb` implementa todo el pipeline del flujo de datos
 
 ### 5.4 Tarea 7: Cálculo de derroche actual
 
-**Decisión:** Calculamos los **minutos ponderados** que la puerta y ventanas estuvieron abiertas (la puerta cuenta como 2 ventanas inferiores y estas como dos superiores). Se define `derroche_actual = 1` si la calefacción está encendida Y los minutos de apertura ponderados superan un umbral.
+**Decisión:** Calculamos los **minutos ponderados** que la puerta y ventanas estuvieron abiertas (la puerta cuenta como 2 ventanas inferiores y estas como dos superiores). Se define derroche_actual = 1 si calefaccion_encendida = 1 y los minutos totales ponderados de apertura son mayores que 12 minutos (20 % × 60 min).
 
 **Resultado:** `data/gold/dataset_tarea7.csv`
 
