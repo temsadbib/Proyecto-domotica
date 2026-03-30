@@ -141,11 +141,17 @@ El notebook `01_eda.ipynb` realiza el análisis exploratorio de datos, incluyend
 
 **Decisión:** Calculamos la correlación entre los 4 sensores de temperatura del aula.
 
+
+<img width="643" height="530" alt="image" src="https://github.com/user-attachments/assets/f461d357-bb06-4e98-96a0-2c4f322ace98" />
+
 **Conclusión:** Los sensores de temperatura presentan correlaciones muy altas entre sí (> 0.95), lo que indica alta **redundancia**. Es viable reducir a un único sensor representativo (Seleccionamos el **sensor 2** por tener la mayor cantidad de datos).
 
 ### 4.2 Correlaciones entre sensores de humedad
 
 **Decisión:** Calculamos la correlación para los 4 sensores de humedad.
+
+<img width="643" height="530" alt="image" src="https://github.com/user-attachments/assets/be5cce77-6866-4157-89f3-cd8e25c4a492" />
+
 
 **Conclusión:** Patrón similar al de temperatura: alta correlación entre sensores, lo que confirma la redundancia. Se puede prescindir de 3 de los 4 sensores sin pérdida significativa de información.
 
@@ -193,6 +199,10 @@ El notebook `02_build_gold.ipynb` implementa todo el pipeline del flujo de datos
 
 **Justificación:** El coeficiente más alto corresponde a `temp_aula` (0.79), lo cual tiene sentido: la temperatura del sensor de calefacción está fuertemente correlacionada con la temperatura general del aula. El R² en test (0.56) indica un ajuste moderado, suficiente para la inferencia.
 
+<img width="819" height="365" alt="image" src="https://github.com/user-attachments/assets/579320d9-5467-4135-a7dd-64a941e0a0e1" />
+
+<img width="458" height="468" alt="image" src="https://github.com/user-attachments/assets/18728a3c-a978-47ba-846d-de5308455957" />
+
 ### 5.3 Tarea 6: Calefacción encendida
 
 **Decisión:** Añadimos la columna `calefaccion_encendida` (0/1) basándose en la temperatura inferida por el modelo lineal y el algoritmo de encendido de la calefacción.
@@ -204,6 +214,9 @@ El notebook `02_build_gold.ipynb` implementa todo el pipeline del flujo de datos
 **Decisión:** Calculamos los **minutos ponderados** que la puerta y ventanas estuvieron abiertas (la puerta cuenta como 2 ventanas inferiores y estas como dos superiores). Se define derroche_actual = 1 si calefaccion_encendida = 1 y los minutos totales ponderados de apertura son mayores que 12 minutos (20 % × 60 min).
 
 **Resultado:** `data/gold/dataset_tarea7.csv`
+
+<img width="1100" height="390" alt="image" src="https://github.com/user-attachments/assets/4d4fc5e7-6d22-45ff-8e28-2876cdb24671" />
+
 
 ### 5.5 Tarea 8: Derroche en la hora siguiente
 
@@ -239,6 +252,9 @@ El notebook `02_build_gold.ipynb` implementa todo el pipeline del flujo de datos
 | `derroche_siguiente_hora` | **TARGET** — Derroche en la hora siguiente (0/1) |
 
 **Resultado:** `data/gold/dataset_tarea9_final.csv` — 3.924 muestras (1.058 derroche, 2.866 no derroche → 26.96% positivos).
+
+<img width="550" height="390" alt="image" src="https://github.com/user-attachments/assets/c31c7489-3f98-465b-922d-c3423bfae33e" />
+
 
 ---
 
@@ -315,6 +331,9 @@ Las 31 features se agrupan en:
 - Mejor Val F1: **0.9706**
 - Umbral óptimo: **0.50**
 
+<img width="800" height="390" alt="image" src="https://github.com/user-attachments/assets/1549bbd8-dce9-40dc-a526-381ae02f7109" />
+
+
 ### 6.3 Métricas finales en test (V2)
 
 | Métrica | Valor |
@@ -348,6 +367,9 @@ Se ha priorizado el **F1-Score** y el **Recall** de la clase *derroche* porque:
 - Es un problema con **clase minoritaria** (solo el 27% de las muestras son derroche)
 - Es preferible tener algún falso positivo (alertar sin derroche real) que falsos negativos (no detectar un derroche real)
 - El ROC-AUC de 0.9660 confirma que el modelo discrimina muy bien entre ambas clases
+
+<img width="450" height="350" alt="image" src="https://github.com/user-attachments/assets/18ca5445-5118-4b50-8fd6-f067b5b57cc0" />
+
 
 ### 6.4 Regla de negocio adicional
 
