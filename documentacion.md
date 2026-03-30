@@ -201,7 +201,7 @@ El notebook `02_build_gold.ipynb` implementa todo el pipeline del flujo de datos
 
 <img width="819" height="365" alt="image" src="https://github.com/user-attachments/assets/579320d9-5467-4135-a7dd-64a941e0a0e1" />
 
-<img width="458" height="468" alt="image" src="https://github.com/user-attachments/assets/18728a3c-a978-47ba-846d-de5308455957" />
+<img width="420" height="400" alt="image" src="https://github.com/user-attachments/assets/18728a3c-a978-47ba-846d-de5308455957" />
 
 ### 5.3 Tarea 6: Calefacción encendida
 
