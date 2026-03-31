@@ -3,9 +3,9 @@ services:
     image: timescale/timescaledb:latest-pg15
     container_name: bd_eficiencia
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=Qwe1234.
-      - POSTGRES_DB=postgres
+      - POSTGRES_USER=x
+      - POSTGRES_PASSWORD=x
+      - POSTGRES_DB=x
     ports:
       - "5432:5432"
     volumes:
@@ -41,9 +41,9 @@ services:
       bash -c "pip install -q --disable-pip-version-check psycopg2-binary
       && python scripts/simulate_ltss_stream.py --host timescaledb"
     environment:
-      PGUSER: postgres
-      PGPASSWORD: Qwe1234.
-      PGDATABASE: postgres
+      PGUSER: x
+      PGPASSWORD: x
+      PGDATABASE: x
     networks:
       - monitoring-network
     depends_on:
@@ -63,9 +63,9 @@ services:
       bash -c "pip install -q --disable-pip-version-check psycopg2-binary
       && python scripts/predict_derroche.py --host timescaledb --interval 60"
     environment:
-      PGUSER: postgres
-      PGPASSWORD: Qwe1234.
-      PGDATABASE: postgres
+      PGUSER: x
+      PGPASSWORD: x
+      PGDATABASE: x
     networks:
       - monitoring-network
     depends_on:
