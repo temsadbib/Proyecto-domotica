@@ -503,7 +503,7 @@ proyecto_domotica_3/
 |---|---|
 | **Correlación sensores** | Alta redundancia entre los 4 sensores (> 0.95). Se puede reducir a 1 sensor. |
 | **Modelo ML lineal** | R² = 0.56 (test) para inferir temperatura de calefacción. |
-| **Red neuronal** | F1 = 0.84, ROC-AUC = 0.97 en test. Recall derroche = 0.90. |
+| **Red neuronal** | F1 = 0.83, ROC-AUC = 0.96 en test. Recall derroche = 0.94. |
 | **App de predicción** | Acepta datos manuales y de horas previas. |
 | **Dashboard Grafana** | Tiempo real con gauges y series temporales de los sensores. |
 
