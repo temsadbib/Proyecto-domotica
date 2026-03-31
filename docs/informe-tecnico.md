@@ -260,7 +260,7 @@ El notebook `02_build_gold.ipynb` implementa todo el pipeline del flujo de datos
 
 ## 6. Modelo de IA: Red Neuronal (Tarea 10)
 
-Se han desarrollado dos versiones de la red neuronal, ambas en **PyTorch**.
+Se han desarrollado dos versiones de la red neuronal, ambas en **PyTorch**. La **versión 2** (`RedDerrocheV2`) se entrena en el notebook `04b_model_nn_improved copy.ipynb` y es la que se utiliza en la aplicación.
 
 ### 6.1 Versión 1: RedDerroche (`04_model_nn.ipynb`)
 
@@ -283,7 +283,7 @@ Input (13 features)
 
 **Métricas en validación:** Mejor Val F1 ≈ 0.89
 
-### 6.2 Versión 2: RedDerrocheV2 (`04b_model_nn_improved.ipynb`) — Modelo final
+### 6.2 Versión 2: RedDerrocheV2 (`04b_model_nn_improved copy.ipynb`) — Modelo final
 
 **Mejoras respecto a V1:**
 
@@ -294,23 +294,18 @@ Input (13 features)
 | Lags | No | 3h (temp_aula, temp_exterior, calefacción) |
 | Deltas | No | Sí (variación 1h y 2h de temperatura) |
 | Interacciones | No | `calef × diff_temp`, `calef × viento` |
-| Activación | ReLU | GELU |
-| Conexión residual | No | Sí (skip connection) |
 | Función de pérdida | BCEWithLogitsLoss | Focal Loss (α=0.25, γ=2.0) |
-| Optimizador | Adam | AdamW (weight_decay=1e-4) |
-| Scheduler | ReduceLROnPlateau | CosineAnnealingWarmRestarts |
 | Early stopping | No | Sí (patience=40) |
 | Umbral | Fijo (0.5) | Optimizado por F1 en validación |
-| Gradient clipping | No | Sí (max_norm=1.0) |
-| Parámetros | ~3.500 | 46.081 |
+| Parámetros | ~3.500 | 29.569 |
 
 **Arquitectura V2:**
 
 ```
 Input (31 features)
-  → Linear(31, 128) → BatchNorm(128) → GELU → Dropout(0.3)
-  → Linear(128, 128) → BatchNorm(128) → GELU → Dropout(0.3) + Skip(residual)
-  → Linear(128, 64) → BatchNorm(64) → GELU → Dropout(0.3)
+  → Linear(31, 128) → BatchNorm(128) → ReLU → Dropout(0.3)
+  → Linear(128, 128) → BatchNorm(128) → ReLU → Dropout(0.3)
+  → Linear(128, 64) → BatchNorm(64) → ReLU → Dropout(0.3)
   → Linear(64, 1) → Sigmoid
 ```
 
@@ -327,53 +322,51 @@ Las 31 features se agrupan en:
 - **Interacciones** (3): diff_temp, calef_x_diff, calef_x_viento
 
 **Entrenamiento:**
-- Early stopping en época 67 (de 500 máximas)
-- Mejor Val F1: **0.9706**
+- Early stopping en época 96 (de 500 máximas)
+- Mejor Val F1: **0.9667**
 - Umbral óptimo: **0.50**
 
-<img width="800" height="390" alt="image" src="https://github.com/user-attachments/assets/1549bbd8-dce9-40dc-a526-381ae02f7109" />
-
+<img width="800" height="390" alt="image" src="https://github.com/user-attachments/assets/15a1ee0d-3294-4ac9-b517-35ef448dd819" />
 
 ### 6.3 Métricas finales en test (V2)
 
 | Métrica | Valor |
 |---------|-------|
-| **Accuracy** | 0.9083 |
-| **Precision** | 0.7889 |
-| **Recall** | 0.8987 |
-| **F1-Score** | 0.8402 |
-| **ROC-AUC** | 0.9660 |
+| **Accuracy** | 0.8981 |
+| **Precision** | 0.7450 |
+| **Recall** | 0.9430 |
+| **F1-Score** | 0.8324 |
+| **ROC-AUC** | 0.9627 |
 
 **Matriz de confusión (test):**
 
 |  | Predicho: No derroche | Predicho: Derroche |
 |---|---|---|
-| **Real: No derroche** | 393 | 38 |
-| **Real: Derroche** | 16 | 142 |
+| **Real: No derroche** | 380 | 51 |
+| **Real: Derroche** | 9 | 149 |
 
 **Informe de clasificación:**
 
 | Clase | Precision | Recall | F1-Score | Support |
 |---|---|---|---|---|
-| No derroche | 0.96 | 0.91 | 0.94 | 431 |
-| Derroche | 0.79 | 0.90 | 0.84 | 158 |
-| **Accuracy** | | | **0.91** | **589** |
-| **Macro avg** | 0.87 | 0.91 | 0.89 | 589 |
-| **Weighted avg** | 0.91 | 0.91 | 0.91 | 589 |
+| No derroche | 0.98 | 0.88 | 0.93 | 431 |
+| Derroche | 0.74 | 0.94 | 0.83 | 158 |
+| **Accuracy** | | | **0.90** | **589** |
+| **Macro avg** | 0.86 | 0.91 | 0.88 | 589 |
+| **Weighted avg** | 0.91 | 0.90 | 0.90 | 589 |
 
 **Justificación de métricas:**
 
 Se ha priorizado el **F1-Score** y el **Recall** de la clase *derroche* porque:
 - Es un problema con **clase minoritaria** (solo el 27% de las muestras son derroche)
 - Es preferible tener algún falso positivo (alertar sin derroche real) que falsos negativos (no detectar un derroche real)
-- El ROC-AUC de 0.9660 confirma que el modelo discrimina muy bien entre ambas clases
+- El ROC-AUC de 0.9627 confirma que el modelo discrimina muy bien entre ambas clases
 
-<img width="450" height="350" alt="image" src="https://github.com/user-attachments/assets/18ca5445-5118-4b50-8fd6-f067b5b57cc0" />
+<img width="450" height="350" alt="image" src="https://github.com/user-attachments/assets/5e56b473-b3a7-4e8e-bb32-50a5772037c5" />
 
+### 6.4 Regla determinista
 
-### 6.4 Regla de negocio adicional
-
-Se implementó una regla determinista en el predictor: si `calefaccion_encendida == 0`, la predicción es automáticamente **no derroche** con probabilidad 0.0. Esto tiene sentido físico directo, ya que sin calefacción encendida no puede existir el derroche tal y como se ha definido.
+Hemos implementado que si `calefaccion_encendida == 0`, la predicción es automáticamente **no derroche** con probabilidad 0.0. Esto tiene sentido físico directo, ya que sin calefacción encendida no puede existir derroche.
 
 ---
 
