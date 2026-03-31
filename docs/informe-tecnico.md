@@ -402,6 +402,30 @@ Al pulsar "Predecir derroche en la siguiente hora", la app muestra:
 
 ## 8. Dashboard en Grafana
 
+### 8.1 Simulación de datos y visualización en tiempo real
+
+Hemos hecho un entorno para demostrar el mismo flujo cuando no hay lecturas en directo del aula.
+
+**Archivo:** `docker-compose.live.yml`
+
+**Decisión:** Usar un docker separado del entorno histórico (`docker-compose.yml`), con puertos distintos.
+
+**Justificación:** Evita solapar volúmenes con el entorno del análisis offline.
+
+| Componente | Archivo | Función |
+|---|---|---|
+| Simulador | `scripts_tiempo_real/datos_simulados.py` | Inserta filas en `ltss` con los mismos `entity_id` que Bronze, magnitudes continuas con ruido correlacionado y binarios para puerta y ventanas |
+| Relleno de huecos | `scripts_tiempo_real/relleno_datos.py` | Completa tramos vacíos en `ltss` para que las vistas por hora no queden cortadas |
+| Calefacción (entrenamiento) | `scripts_tiempo_real/train_calefaccion.py` | Genera `models/calefaccion_linear.joblib` (regresión lineal) |
+| Calefacción (inferencia) | `scripts_tiempo_real/estado_calefaccion.py` | Calcula el estado de la calefacciión para el predictor |
+| Vista live | `sql/04_grafana_live_silver.sql` | Expone `time`, métrica y valor numérico desde `silver_sensores` para paneles multiserie en Grafana |
+| Tabla predicciones_derroche | `sql/06_predicciones_live.sql` | Tabla que almacena la salida de la predicción |
+| Predicción | `scripts_tiempo_real/predict_derroche.py` | Cada 60 s lee `gold_features_horaria`, ejecuta la red neuronal V2 y hace upsert en `predicciones_derroche` |
+
+**Resultado:** Con la base inicializada, el simulador escribiendo en `ltss`, `predict_derroche.py` activo y Grafana, podemos visualizar en tiempo real el estado del aula y la probabilidad de derroche en la hora siguiente.
+
+### 8.2 Dashboards y paneles
+
 Los dashboards del proyecto son los siguientes:
 | Archivo | Uso |
 |---------|-----|
@@ -445,11 +469,13 @@ Los dashboards del proyecto son los siguientes:
 ## 9. Estructura del repositorio
 
 ```
-proyecto_domotica_3/
+proyecto_domotica/
 ├── requirements.txt                  # Dependencias Python
+├── docker-compose.yml                # TimescaleDB + Grafana
+├── docker-compose.live.yml           # Stack en tiempo real
 ├── app/
 │   ├── predictor.py                  # Módulo de inferencia PyTorch
-│   └── app.py                     # App Streamlit de predicción
+│   └── app.py                        # App Streamlit de predicción
 ├── .streamlit/
 │   └── config.toml                   # Tema de Streamlit
 ├── models/                           # Artefactos del modelo
@@ -472,25 +498,23 @@ proyecto_domotica_3/
 │   ├── 01_bronze_extract.sql          # Vista bronze
 │   ├── 02_silver_clean.sql            # Vista silver
 │   ├── 03_gold_features_hourly.sql    # Vista gold (sensor 2)
-│   ├── 04_grafana_live_silver.sql     # Vista para Grafana en tiempo real
-│   └── 05_gold_correlaciones.sql      # Vista para correlaciones
+│   ├── 04_gold_correlaciones.sql      # Vista para correlaciones
+│   ├── 05_grafana_live_silver.sql     # Vista para Grafana en tiempo real
+│   └── 06_predicciones_live.sql       # Tabla que almacena las predicciones 
 ├── notebooks/
 │   ├── 01_eda.ipynb                   # Análisis exploratorio
 │   ├── 02_build_gold.ipynb            # Construcción dataset gold
-│   ├── 03_model_ml.ipynb              # Modelo ML lineal
 │   ├── 04_model_nn.ipynb              # Red neuronal
-│   └── 05_evaluation.ipynb            # Evaluación y métricas
-├── bd/
-│   ├── docker-compose.yml             # TimescaleDB + Grafana
-│   └── init-scripts/
-│       ├── 01_creacion.sql            # Creación tabla ltss
-│       └── 02_datos.sql               # Volcado de datos
+├── scripts_tiempo_real/
+│   ├── datos_simulados.py             # Inserción continua en ltss
+│   ├── train_calefaccion.py           # Entrena calefaccion_linear.joblib
+│   ├── estado_calefaccion.py          # Inferencia de calefaccion_encendida
+│   ├── predict_derroche.py            # Predicción que envia a predicciones_derroche
+│   └── relleno_datos.py               # Relleno de huecos en ltss
 └── grafana/
     ├── dashboards/
-    └── eficiencia_energetica.json     # Dashboard 
-        └── provisioning/
-            ├── dashboards/provider.yml
-            └── datasources/timescaledb.yml
+    ├── domotica - estatico.json       # Dashboard estático
+    └── domotica - en directo.json     # Dashboard en directo
 ```
 
 ---
@@ -505,7 +529,7 @@ proyecto_domotica_3/
 | **Modelo ML lineal** | R² = 0.56 (test) para inferir temperatura de calefacción. |
 | **Red neuronal** | F1 = 0.83, ROC-AUC = 0.96 en test. Recall derroche = 0.94. |
 | **App de predicción** | Acepta datos manuales y de horas previas. |
-| **Dashboard Grafana** | Tiempo real con gauges y series temporales de los sensores. |
+| **Dashboard Grafana** | Tiempo real e histórico con gauges y series temporales de los sensores. |
 
 ### 10.2 Conclusiones
 
