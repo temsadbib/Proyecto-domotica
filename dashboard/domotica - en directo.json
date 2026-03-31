@@ -462,7 +462,7 @@
                   "text": "APAGADA"
                 },
                 "ENCENDIDA": {
-                  "color": "semi-dark-orange",
+                  "color": "dark-orange",
                   "index": 0,
                   "text": "ENCENDIDA"
                 }
@@ -494,7 +494,7 @@
       },
       "id": 48,
       "options": {
-        "colorMode": "background",
+        "colorMode": "background_solid",
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
@@ -563,11 +563,11 @@
                 "value": 0
               },
               {
-                "color": "yellow",
+                "color": "dark-yellow",
                 "value": 40
               },
               {
-                "color": "red",
+                "color": "dark-red",
                 "value": 60
               }
             ]
@@ -578,13 +578,13 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 6,
+        "w": 7,
         "x": 6,
         "y": 7
       },
       "id": 40,
       "options": {
-        "colorMode": "background",
+        "colorMode": "background_solid",
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
@@ -623,12 +623,13 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
           "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
+            "axisGridShow": false,
             "axisLabel": "",
             "axisPlacement": "auto",
             "fillOpacity": 80,
@@ -643,7 +644,7 @@
               "type": "linear"
             },
             "thresholdsStyle": {
-              "mode": "line"
+              "mode": "off"
             }
           },
           "mappings": [],
@@ -657,23 +658,36 @@
                 "value": 0
               },
               {
-                "color": "yellow",
-                "value": 40
+                "color": "semi-dark-yellow",
+                "value": 50
               },
               {
-                "color": "red",
-                "value": 60
+                "color": "semi-dark-red",
+                "value": 80
               }
             ]
           },
           "unit": "percent"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "time:HH:mm"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 7,
-        "w": 12,
-        "x": 12,
+        "w": 11,
+        "x": 13,
         "y": 7
       },
       "id": 42,
@@ -686,7 +700,7 @@
           "calcs": [],
           "displayMode": "hidden",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": false
         },
         "orientation": "vertical",
         "showValue": "always",
@@ -1029,7 +1043,7 @@
           }
         }
       ],
-      "title": "Humedad Interior + Exterior",
+      "title": "Humedad Interior y Exterior",
       "type": "timeseries"
     },
     {
@@ -1135,6 +1149,10 @@
                   "fixedColor": "light-purple",
                   "mode": "fixed"
                 }
+              },
+              {
+                "id": "unit",
+                "value": "percent"
               }
             ]
           }
@@ -1188,7 +1206,7 @@
       },
       "id": 44,
       "panels": [],
-      "title": "Puertas y ventanas",
+      "title": "Estado de puertas y ventanas",
       "type": "row"
     },
     {
@@ -1272,11 +1290,29 @@
         {
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT \"time\" AS \"time\", REPLACE(REPLACE(entity_id, 'binary_sensor.sensor_', ''), '_contact', '') AS metric, state_numeric AS value FROM silver_sensores WHERE entity_id LIKE 'binary_sensor.%' AND state_numeric IS NOT NULL AND $__timeFilter(\"time\") ORDER BY \"time\"",
-          "refId": "A"
+          "rawQuery": true,
+          "rawSql": "SELECT \n  \"time\" AS \"time\", \n  CASE \n    WHEN entity_id LIKE '%puerta%' THEN 'Puerta'\n    WHEN entity_id LIKE '%ventana%' THEN \n      'Ventana ' || LPAD(SUBSTRING(entity_id FROM '[0-9]+'), 2, '0')\n    ELSE INITCAP(REPLACE(REPLACE(entity_id, 'binary_sensor.sensor_', ''), '_contact', ''))\n  END AS metric, \n  state_numeric AS value \nFROM silver_sensores \nWHERE entity_id LIKE 'binary_sensor.%' \n  AND state_numeric IS NOT NULL \n  AND $__timeFilter(\"time\")\nORDER BY \"time\" ASC",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
         }
       ],
-      "title": "Estado Puertas y Ventanas",
+      "title": "",
       "type": "state-timeline"
     },
     {
@@ -1289,7 +1325,7 @@
       },
       "id": 43,
       "panels": [],
-      "title": "Predicción de derroche",
+      "title": "Condiciones por hora (Hoy)",
       "type": "row"
     },
     {
@@ -1340,12 +1376,72 @@
                 "value": 175
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "T.Aula"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "celsius"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Hum.Aula"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "T.Ext"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "celsius"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Nubes"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Viento"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "velocitykmh"
+              }
+            ]
           }
         ]
       },
       "gridPos": {
-        "h": 10,
-        "w": 11,
+        "h": 8,
+        "w": 24,
         "x": 0,
         "y": 45
       },
@@ -1363,7 +1459,7 @@
           "refId": "A"
         }
       ],
-      "title": "Condiciones por Hora (Hoy)",
+      "title": "",
       "type": "table"
     }
   ],
@@ -1385,6 +1481,6 @@
   "timezone": "browser",
   "title": "Eficiencia Energetica - Hoy en Directo",
   "uid": "eficiencia-energetica",
-  "version": 2,
+  "version": 3,
   "weekStart": ""
 }
