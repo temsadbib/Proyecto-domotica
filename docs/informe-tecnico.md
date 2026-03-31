@@ -23,7 +23,7 @@ Se considera derroche cuando, en una hora determinada, la calefacción está enc
 
 ### 1.3 Target del modelo
 
-Se considera derroche cuando, en una hora determinada, la calefacción está encendida y las puertas o ventanas han permanecido abiertas más de un umbral de minutos. Se aplica una ponderación: la puerta cuenta el doble que una ventana inferior, de acuerdo con las indicaciones del proyecto.
+La variable objetivo es binaria: 1 si en la hora siguiente hay derroche, y 0 en caso contrario. En el dataset aparece como `derroche_siguiente_hora`: para cada hora `t` indica si habrá derroche en `t+1`, calculado desplazando una hora el indicador de derroche del momento. El modelo usa las lecturas de la hora `t` para predecir con antelación si en la próxima hora habrá derroche.
 
 ---
 
