@@ -409,14 +409,6 @@ Al pulsar "Predecir derroche en la siguiente hora", la app muestra:
 
 ## 8. Dashboard en Grafana
 
-### 8.1 Configuración
-
-El dashboard se despliega automáticamente con Docker:
-- **Datasource:** TimescaleDB (PostgreSQL) en `bd/grafana/provisioning/datasources/timescaledb.yml`
-- **Dashboard:** JSON en `bd/grafana/dashboards/eficiencia_energetica.json`
-
-### 8.2 Dashboard:
-
 Los dashboards del proyecto son los siguientes:
 | Archivo | Uso |
 |---------|-----|
@@ -439,6 +431,21 @@ Los dashboards del proyecto son los siguientes:
    - Derroche por hora del día y día de la semana: mapa de calor con el porcentaje de derroche.  
    - Derroche mensual: barras con las horas de derroche por mes.  
    - Minutos puertas y ventanas abiertas por mes: barras apiladas con la suma de minutos que han estado abiertas puertas y ventanas.
+
+**Paneles del dashboard en tiempo real**
+
+1. **Estado actual del aula**
+   - Cinco gauges con las temperaturas de los cuantro sensores, humedad y temperatura exterior.
+   - Estado de la calefacción.
+   - Alerta de derroche.
+   - Derroche por hora.
+3. **Temperaturas hoy**
+   — Serie con la temperatura de los cuatro sensores contra la exterior.
+5. **Ambiente**
+   - Humedad interior y exterior.
+   - Viento y nubosidad.
+7. **Puertas y ventanas**
+   - Estado de puertas y ventanas.
 
 ---
 
