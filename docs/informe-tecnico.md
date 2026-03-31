@@ -432,7 +432,7 @@ Los dashboards del proyecto son los siguientes:
    - Derroche mensual: barras con las horas de derroche por mes.  
    - Minutos puertas y ventanas abiertas por mes: barras apiladas con la suma de minutos que han estado abiertas puertas y ventanas.
 
-**Paneles del dashboard en tiempo real**
+**Paneles del dashboard en tiempo real:**
 
 1. **Estado actual del aula**
    - Cinco gauges con las temperaturas de los cuantro sensores, humedad y temperatura exterior.
