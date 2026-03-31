@@ -1,0 +1,79 @@
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: bd_eficiencia
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Qwe1234.
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init-scripts:/docker-entrypoint-initdb.d/
+    networks:
+      - monitoring-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana_eficiencia
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - monitoring-network
+    depends_on:
+      - timescaledb
+
+  simulate-ltss:
+    profiles:
+      - simulate
+    image: python:3.12-slim
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ../scripts:/app/scripts
+    command: >
+      bash -c "pip install -q --disable-pip-version-check psycopg2-binary
+      && python scripts/simulate_ltss_stream.py --host timescaledb"
+    environment:
+      PGUSER: postgres
+      PGPASSWORD: Qwe1234.
+      PGDATABASE: postgres
+    networks:
+      - monitoring-network
+    depends_on:
+      - timescaledb
+
+  predict-derroche:
+    profiles:
+      - simulate
+    image: python:3.12-slim
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ../scripts:/app/scripts
+      - ../app:/app/app
+      - ../models:/app/models
+    command: >
+      bash -c "pip install -q --disable-pip-version-check psycopg2-binary
+      && python scripts/predict_derroche.py --host timescaledb --interval 60"
+    environment:
+      PGUSER: postgres
+      PGPASSWORD: Qwe1234.
+      PGDATABASE: postgres
+    networks:
+      - monitoring-network
+    depends_on:
+      - timescaledb
+
+networks:
+  monitoring-network:
+    driver: bridge
+
+volumes:
+  grafana-storage:
