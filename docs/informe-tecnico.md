@@ -260,7 +260,7 @@ El notebook `02_build_gold.ipynb` implementa todo el pipeline del flujo de datos
 
 ## 6. Modelo de IA: Red Neuronal (Tarea 10)
 
-Se han desarrollado dos versiones de la red neuronal, ambas en **PyTorch**. La **versión 2** (`RedDerrocheV2`) se entrena en el notebook `04b_model_nn_improved copy.ipynb` y es la que se utiliza en la aplicación.
+Se han desarrollado dos versiones de la red neuronal, ambas en **PyTorch**. La **versión 2** (`RedDerrocheV2`) se entrena en el notebook `04_model_nn_.ipynb` y es la que se utiliza en la aplicación.
 
 ### 6.1 Versión 1: RedDerroche (`04_model_nn.ipynb`)
 
