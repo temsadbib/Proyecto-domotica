@@ -1,0 +1,40 @@
+CREATE OR REPLACE VIEW bronze_sensores AS
+SELECT
+    "time",
+    entity_id,
+    state,
+    attributes
+FROM ltss
+WHERE entity_id IN (
+    'sensor.sensor_temperatura_1_temperature',
+    'sensor.sensor_temperatura_2_temperature',
+    'sensor.sensor_temperatura_3_temperature',
+    'sensor.sensor_temperatura_4_temperature',
+    'sensor.sensor_temperatura_1_humidity',
+    'sensor.sensor_temperatura_2_humidity',
+    'sensor.sensor_temperatura_3_humidity',
+    'sensor.sensor_temperatura_4_humidity',
+    'sensor.sensor_temperatura_1_pressure',
+    'sensor.sensor_temperatura_2_pressure',
+    'sensor.sensor_temperatura_3_pressure',
+    'sensor.sensor_temperatura_4_pressure',
+    'binary_sensor.sensor_puerta_1_contact',
+    'binary_sensor.sensor_ventana_1_contact',
+    'binary_sensor.sensor_ventana_2_contact',
+    'binary_sensor.sensor_ventana_3_contact',
+    'binary_sensor.sensor_ventana_4_contact',
+    'binary_sensor.sensor_ventana_5_contact',
+    'binary_sensor.sensor_ventana_6_contact',
+    'binary_sensor.sensor_ventana_7_contact',
+    'binary_sensor.sensor_ventana_8_contact',
+    'binary_sensor.sensor_ventana_9_contact',
+    'binary_sensor.sensor_ventana_10_contact',
+    'binary_sensor.sensor_ventana_11_contact',
+    'binary_sensor.sensor_ventana_12_contact',
+    'sensor.mislata_temperatura',
+    'sensor.mislata_nubosidad',
+    'sensor.mislata_humedad',
+    'sensor.mislata_viento',
+    'sensor.sun_solar_elevation',
+    'sensor.sun_solar_azimuth'
+);
