@@ -440,7 +440,7 @@ Los dashboards del proyecto son los siguientes:
    - Alerta de derroche.
    - Derroche por hora.
 3. **Temperaturas hoy**
-   — Serie con la temperatura de los cuatro sensores contra la exterior.
+   - Serie con la temperatura de los cuatro sensores contra la exterior.
 5. **Ambiente**
    - Humedad interior y exterior.
    - Viento y nubosidad.
