@@ -540,7 +540,7 @@ proyecto_domotica/
 
 2. **Calefacción**: El estado de la calefacción se infirió mediante un modelo lineal a partir de los datos del aula.
 
-3. **Derroche**: El derroche se define como calefacción encendida cuando puertas y ventanas están abiertas más de un umbral de X minutos ponderados.
+3. **Derroche**: El derroche se define como calefacción encendida cuando puertas y ventanas están abiertas más de un umbral de 12 minutos ponderados.
 
 4. **Target**: El target del clasificador lo hemos construido desplazando esa señal una hora hacia adelante.
 
