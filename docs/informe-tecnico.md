@@ -484,6 +484,8 @@ proyecto_domotica/
 │   └── calefaccion_linear.joblib     # RL calefacción
 ├── docs/
 │   └── informe-tecnico.md            # Informe técnico
+├── slides/
+│   └── presentacion.pdf              # PDF de presentación
 ├── data/
 │   ├── bronze/
 │   │   ├── dataset_sucio.csv          # Dataset con datos crudos
