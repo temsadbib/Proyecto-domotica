@@ -110,7 +110,7 @@ WHERE entity_id IN (
 
 ### 3.3 Capa Gold — Agregación por horas y features
 
-**Vista:** `gold_features_horaria` (`sql/03_gold_features_hourly.sql` y `bd/init-scripts/03_vistas.sql`)
+**Vista:** `gold_features_horaria` (`sql/03_gold_features_hourly.sql`)
 
 **Decisión:** Agregar los datos por hora y calcular:
 - Media de temperatura, humedad y presión del aula
@@ -120,7 +120,7 @@ WHERE entity_id IN (
 
 **Justificación:** Trabajar a nivel horario reduce el ruido sin perder variacion relevantes en los datos.
 
-Se dispone de dos variantes:
+Se dispone de:
 - `sql/03_gold_features_hourly.sql`: usa solo el **sensor 2** para temperatura/humedad/presión del aula (basado en el análisis de correlación que determina que los sensores son redundantes) ya que es el sensor con mayor cantidad datos.
 
 ### 3.4 Vista de correlaciones
