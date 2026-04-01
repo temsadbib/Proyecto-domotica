@@ -18,14 +18,14 @@ Proyecto para estimar si habrá **derroche energético en la hora siguiente** en
   * `01_eda.ipynb`
   * `02_build_gold.ipynb`
   * `03_model_nn.ipynb`
-* **`slides/`** — Presentación del proyecto
-  * `presentacion.pdf`
 * **`scripts_tiempo_real/`** — Scripts de ingesta, simulación, predicción y entrenamiento en directo
   * `datos_simulados.py`
   * `estado_calefaccion.py`
   * `predict_derroche.py`
   * `relleno_datos.py`
   * `train_calefaccion.py`
+* **`slides/`** — Presentación del proyecto
+  * `presentacion.pdf`
 * **`sql/`** — Scripts SQL (capas bronze, silver, gold, vistas y almacén de predicciones)
   * `01_bronze_extract.sql`
   * `02_silver_clean.sql`
