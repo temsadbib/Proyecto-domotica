@@ -260,9 +260,9 @@ El notebook `02_build_gold.ipynb` implementa todo el pipeline del flujo de datos
 
 ## 6. Modelo de IA: Red Neuronal (Tarea 10)
 
-Se han desarrollado dos versiones de la red neuronal, ambas en **PyTorch**. La **versión 2** (`RedDerrocheV2`) se entrena en el notebook `04_model_nn_.ipynb` y es la que se utiliza en la aplicación.
+Se han desarrollado dos versiones de la red neuronal, ambas en **PyTorch**. La **versión 2** (`RedDerrocheV2`) se entrena en el notebook `03_model_nn.ipynb` y es la que se utiliza en la aplicación.
 
-### 6.1 Versión 1: RedDerroche (`04_model_nn.ipynb`)
+### 6.1 Versión 1: RedDerrocheV1
 
 **Arquitectura:**
 
@@ -283,7 +283,7 @@ Input (13 features)
 
 **Métricas en validación:** Mejor Val F1 ≈ 0.89
 
-### 6.2 Versión 2: RedDerrocheV2 (`04b_model_nn_improved copy.ipynb`) — Modelo final
+### 6.2 Versión 2: RedDerrocheV2 (`03_model_nn.ipynb`) — Modelo final
 
 **Mejoras respecto a V1:**
 
@@ -481,6 +481,7 @@ proyecto_domotica/
 ├── models/                           # Artefactos del modelo
 │   ├── modelo_derroche.pt            # Modelo
 │   └── scaler_derroche.joblib        # Scaler
+│   └── calefaccion_linear.joblib     # RL calefacción
 ├── docs/
 │   └── informe-tecnico.md            # Informe técnico
 ├── data/
@@ -504,7 +505,7 @@ proyecto_domotica/
 ├── notebooks/
 │   ├── 01_eda.ipynb                   # Análisis exploratorio
 │   ├── 02_build_gold.ipynb            # Construcción dataset gold
-│   ├── 04_model_nn.ipynb              # Red neuronal
+│   ├── 03_model_nn.ipynb              # Red neuronal
 ├── scripts_tiempo_real/
 │   ├── datos_simulados.py             # Inserción continua en ltss
 │   ├── train_calefaccion.py           # Entrena calefaccion_linear.joblib
