@@ -448,6 +448,10 @@ Los dashboards del proyecto son los siguientes:
    - Derroche por hora del día y día de la semana: mapa de calor con el porcentaje de derroche.  
    - Derroche mensual: barras con las horas de derroche por mes.  
    - Minutos puertas y ventanas abiertas por mes: barras apiladas con la suma de minutos que han estado abiertas puertas y ventanas.
+<img width="2854" height="1008" alt="image" src="https://github.com/user-attachments/assets/fc2b055f-619e-46a0-b5e3-822e122c8f28" />
+<img width="2854" height="562" alt="image" src="https://github.com/user-attachments/assets/e1f8a4fc-67bb-4420-8e0d-d0e210e7f0e9" />
+<img width="2854" height="566" alt="image" src="https://github.com/user-attachments/assets/f3e26113-612e-4a45-835b-041583808db3" />
+<img width="2854" height="1040" alt="image" src="https://github.com/user-attachments/assets/de1ed38d-fba1-40ed-8b46-e996de16a4cd" />
 
 **Paneles del dashboard en tiempo real:**
 
@@ -463,6 +467,10 @@ Los dashboards del proyecto son los siguientes:
    - Viento y nubosidad.
 7. **Puertas y ventanas**
    - Estado de puertas y ventanas.
+
+<img width="2854" height="858" alt="image" src="https://github.com/user-attachments/assets/d91ccce5-32f5-479f-999e-f90aebc23849" />
+<img width="2854" height="1238" alt="image" src="https://github.com/user-attachments/assets/6f4bae0e-9158-44bb-beac-7bb7ef7ac462" />
+<img width="2854" height="1118" alt="image" src="https://github.com/user-attachments/assets/3debacf1-6bcf-4cd2-a37b-57c49d7db666" />
 
 ---
 
