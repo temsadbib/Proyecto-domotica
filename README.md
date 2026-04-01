@@ -4,7 +4,7 @@ Proyecto para estimar si habrá **derroche energético en la hora siguiente** en
 
 **Salida del modelo:** clasificación binaria (0 = no derroche, 1 = derroche en la hora siguiente).
 
-## Estructura de directorios
+### Estructura de directorios
 
 * **`app/`** — App Streamlit de predicción
   * `app.py`
